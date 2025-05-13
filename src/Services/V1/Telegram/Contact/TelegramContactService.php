@@ -18,7 +18,7 @@ readonly class TelegramContactService
     /**
      * @throws Throwable
      */
-    public function importContacts(array $peers): bool
+    public function importContacts(array $peers): array
     {
         $requestParams = [
             'peers' => $peers,
@@ -31,7 +31,7 @@ readonly class TelegramContactService
                 $requestParams
             );
 
-            return boolval($response['data']['import'] ?? false);
+            return $response['data'] ?? [];
         } catch (Throwable $th) {
             report($th);
 

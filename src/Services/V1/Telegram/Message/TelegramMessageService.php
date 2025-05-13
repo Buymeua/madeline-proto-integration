@@ -18,7 +18,7 @@ readonly class TelegramMessageService
     /**
      * @throws Throwable
      */
-    public function sendSimpleMessage(string $peer, string $message): bool
+    public function sendSimpleMessage(array|int|string $peer, string $message): bool
     {
         $requestParams = [
             'peer' => $peer,
