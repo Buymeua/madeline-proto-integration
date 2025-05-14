@@ -39,4 +39,30 @@ readonly class TelegramMessageService
             throw $th;
         }
     }
+
+    /**
+     * @throws Throwable
+     */
+    public function sendMediaMessage(array|int|string $peer, string $message, string $fileUrl): bool
+    {
+        $requestParams = [
+            'peer' => $peer,
+            'message' => $message,
+            'fileUrl' => $fileUrl
+        ];
+
+        try {
+            $response = $this->httpClientService->performRequest(
+                HttpRequestMethodsEnum::METHOD_POST->value,
+                TelegramMessageEndpointsEnum::SEND_MEDIA_MESSAGE->value,
+                $requestParams
+            );
+
+            return boolval($response['data']['sent'] ?? false);
+        } catch (Throwable $th) {
+            report($th);
+
+            throw $th;
+        }
+    }
 }
