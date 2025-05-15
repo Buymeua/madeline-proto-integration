@@ -18,7 +18,7 @@ readonly class TelegramUserService
     /**
      * @throws Throwable
      */
-    public function existsByUsername(string $username): bool
+    public function existsByUsername(string $username): array
     {
         $requestParams = [
             'username' => $username,
@@ -31,7 +31,7 @@ readonly class TelegramUserService
                 $requestParams
             );
 
-            return boolval($response['data']['exist'] ?? false);
+            return $response['data'];
         } catch (Throwable $th) {
             report($th);
 
