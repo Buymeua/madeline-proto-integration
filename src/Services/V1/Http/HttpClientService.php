@@ -71,10 +71,12 @@ readonly class HttpClientService implements HttpClientServiceInterface
     public function performMultipartRequest(string $method, string $uri, array $data = [], array $files = [], array $headers = []): array
     {
         $baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
-        $client = new Client(['base_uri' => $baseUri . '/']);
-        $requestUri = trim($uri, ' /');
 
-        $this->applyDefaultHeaders($headers, $forceJson = false); // не выставляем JSON заголовки
+        $client = new Client(['base_uri' => $baseUri . '\\']);
+
+        $requestUri = trim($uri, ' \\');
+
+        $this->applyDefaultHeaders($headers,false);
 
         $multipart = [];
 

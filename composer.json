@@ -1,6 +1,6 @@
 {
     "name": "buyme/madeline-proto-integration",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "Laravel package for the MadelineProto microservice in BuymeUa",
     "type": "library",
     "keywords": [
