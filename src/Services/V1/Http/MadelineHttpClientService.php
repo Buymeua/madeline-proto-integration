@@ -22,4 +22,10 @@ readonly class MadelineHttpClientService extends HttpClientService
 
         return parent::performRequest($method, $uri, $params, $headers);
     }
+    public function performMultipartRequest(string $method, string $uri, array $data = [], array $files = [], array $headers = []): array
+    {
+        $this->authService->autoLogin();
+
+        return parent::performMultipartRequest($method, $uri, $data, $files, $headers);
+    }
 }
