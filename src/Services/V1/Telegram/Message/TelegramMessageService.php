@@ -75,4 +75,39 @@ readonly class TelegramMessageService
             throw $th;
         }
     }
+
+    /**
+     * @throws Throwable
+     */
+    public function sendUploadedFileMessage(
+        array|int|string $peer,
+        \Illuminate\Http\UploadedFile $file,
+        ParseMode $parseMode = ParseMode::TEXT,
+        ?string $message = null,
+    ): bool {
+        try {
+            $response = $this->httpClientService->performMultipartRequest(
+                method: HttpRequestMethodsEnum::METHOD_POST->value,
+                uri: TelegramMessageEndpointsEnum::SEND_UPLOADED_FILE_MESSAGE->value,
+                data: [
+                    'peer' => $peer,
+                    'message' => $message,
+                    'parse_mode' => $parseMode->value,
+                ],
+                files: [
+                    'file' => [
+                        'path' => $file->getPathname(),
+                        'name' => $file->getClientOriginalName(),
+                        'mime' => $file->getMimeType(),
+                    ],
+                ]
+            );
+
+            return boolval($response['data']['sent'] ?? false);
+        } catch (Throwable $th) {
+            report($th);
+
+            throw $th;
+        }
+    }
 }

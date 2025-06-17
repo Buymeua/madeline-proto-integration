@@ -68,6 +68,67 @@ readonly class HttpClientService implements HttpClientServiceInterface
         }
     }
 
+    public function performMultipartRequest(string $method, string $uri, array $data = [], array $files = [], array $headers = []): array
+    {
+        $baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
+        $client = new Client(['base_uri' => $baseUri . '/']);
+        $requestUri = trim($uri, ' /');
+
+        $this->applyDefaultHeaders($headers, $forceJson = false); // не выставляем JSON заголовки
+
+        $multipart = [];
+
+        foreach ($data as $name => $value) {
+            $multipart[] = [
+                'name' => $name,
+                'contents' => (string) $value,
+            ];
+        }
+
+        foreach ($files as $name => $file) {
+            $multipart[] = [
+                'name' => $name,
+                'contents' => fopen($file['path'], 'r'),
+                'filename' => $file['name'] ?? basename($file['path']),
+                'headers' => [
+                    'Content-Type' => $file['mime'] ?? 'application/octet-stream',
+                ],
+            ];
+        }
+
+        $requestOptions = [
+            'headers' => $headers,
+            'multipart' => $multipart,
+            'timeout' => 180,
+        ];
+
+        try {
+            $response = $client->request($method, $requestUri, $requestOptions);
+
+            return $this->getResponseContent($response);
+        } catch (RequestException $exception) {
+            $decodedContent = $this->getRequestExceptionContent($exception);
+            $messageCode = strval(Arr::get($decodedContent, 'message_code'));
+
+            $customException = match ($messageCode) {
+                MessageCodesEnum::NOT_LOGGED_IN->value => MadelineNotLoggedInException::class,
+                MessageCodesEnum::NO_AUTH_SESSION->value => MadelineNoAuthSessionException::class,
+                default => null,
+            };
+
+            if (is_null($customException)) {
+                throw new MadelineRequestException(
+                    strval(Arr::get($decodedContent, 'message')),
+                    $exception->getCode(),
+                    $exception,
+                    $messageCode
+                );
+            }
+
+            throw new $customException;
+        }
+    }
+
     protected function getResponseContent(ResponseInterface $response): array
     {
         $content = $response->getBody()->getContents();
@@ -92,10 +153,12 @@ readonly class HttpClientService implements HttpClientServiceInterface
         $requestUri .= '?' . $queryParams;
     }
 
-    protected function applyDefaultHeaders(array &$headers): void
+    protected function applyDefaultHeaders(array &$headers, bool $forceJson = true): void
     {
-        $headers['Content-Type'] = 'application/json';
-        $headers['Accept'] = 'application/json';
+        if ($forceJson) {
+            $headers['Content-Type'] = 'application/json';
+            $headers['Accept'] = 'application/json';
+        }
 
         $authToken = $this->authTokenService->getAuthToken();
 
