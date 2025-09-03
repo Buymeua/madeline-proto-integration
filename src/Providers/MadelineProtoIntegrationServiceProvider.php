@@ -7,6 +7,7 @@ namespace Buyme\MadelineProtoIntegration\Providers;
 use Buyme\MadelineProtoIntegration\Services\V1\Telegram\Auth\TelegramAuthService;
 use Buyme\MadelineProtoIntegration\Services\V1\Telegram\Contact\TelegramContactService;
 use Buyme\MadelineProtoIntegration\Services\V1\Telegram\Message\TelegramMessageService;
+use Buyme\MadelineProtoIntegration\Services\V1\Telegram\Channel\TelegramChannelService;
 use Buyme\MadelineProtoIntegration\Services\V1\Telegram\User\TelegramUserService;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -43,6 +44,10 @@ class MadelineProtoIntegrationServiceProvider extends ServiceProvider
 
         $this->app->singleton('mpi-contact', function (Application $app) {
             return $app->make(TelegramContactService::class);
+        });
+
+        $this->app->singleton('mpi-channel', function (Application $app) {
+            return $app->make(TelegramChannelService::class);
         });
     }
 }
