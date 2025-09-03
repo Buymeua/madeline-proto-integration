@@ -25,11 +25,11 @@ fi
 echo -e "${YELLOW}📦 Текущая версия в composer.json: ${VERSION}${NC}"
 
 # Проверяем, есть ли несохраненные изменения
-if ! git diff-index --quiet HEAD --; then
-    echo -e "${YELLOW}⚠️  Есть несохраненные изменения. Коммитим...${NC}"
-    git add composer.json
-    git commit -m "chore: bump version to ${VERSION}"
-    echo -e "${GREEN}✅ Изменения закоммичены${NC}"
+if ! git diff-index --quiet HEAD -- || ! git diff --cached --quiet; then
+    echo -e "${YELLOW}⚠️  Есть несохраненные изменения. Коммитим все файлы...${NC}"
+    git add -A
+    git commit -m "chore: bump version to ${VERSION} and prepare release"
+    echo -e "${GREEN}✅ Все изменения закоммичены${NC}"
 else
     echo -e "${GREEN}✅ Нет несохраненных изменений${NC}"
 fi
@@ -72,6 +72,13 @@ if [[ "$CURRENT_BRANCH" != "main" ]] && [[ "$CURRENT_BRANCH" != "master" ]]; the
     echo -e "${YELLOW}⚠️  Вы находитесь на ветке ${CURRENT_BRANCH}. Хотите переключиться на main и смержить? (y/n)${NC}"
     read -r response
     if [[ "$response" =~ ^[Yy]$ ]]; then
+        # Сохраняем текущие изменения перед переключением
+        if ! git diff-index --quiet HEAD -- || ! git diff --cached --quiet; then
+            echo -e "${YELLOW}📦 Сохраняем локальные изменения...${NC}"
+            git add -A
+            git commit -m "chore: save local changes before switching branches"
+        fi
+        
         git checkout main
         git merge "$CURRENT_BRANCH"
         git push origin main
