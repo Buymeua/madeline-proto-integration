@@ -33,17 +33,21 @@ readonly class TelegramChannelService
 
 		try {
 
+			$files = [];
+
+			if ($photo instanceof UploadedFile) {
+				$files['file'] = [
+					'path' => $photo->getPathname(),
+					'name' => $photo->getClientOriginalName(),
+					'mime' => $photo->getMimeType(),
+				];
+			}
+
 			return $this->httpClientService->performMultipartRequest(
 				method: HttpRequestMethodsEnum::METHOD_POST->value,
 				uri: TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value,
 				data: $requestParams,
-				files: [
-					'file' => [
-						'path' => $photo->getPathname(),
-						'name' => $photo->getClientOriginalName(),
-						'mime' => $photo->getMimeType(),
-					],
-				]
+				files: $files
 			);
 
 		} catch (Throwable $th) {
@@ -69,17 +73,21 @@ readonly class TelegramChannelService
 
 		try {
 
+			$files = [];
+
+			if ($photo instanceof UploadedFile) {
+				$files['file'] = [
+					'path' => $photo->getPathname(),
+					'name' => $photo->getClientOriginalName(),
+					'mime' => $photo->getMimeType(),
+				];
+			}
+
 			return $this->httpClientService->performMultipartRequest(
 				method: HttpRequestMethodsEnum::METHOD_POST->value,
 				uri: TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value . "/$channel_id",
 				data: $requestParams,
-				files: [
-					'file' => [
-						'path' => $photo->getPathname(),
-						'name' => $photo->getClientOriginalName(),
-						'mime' => $photo->getMimeType(),
-					],
-				]
+				files: $files
 			);
 
 		} catch (Throwable $th) {
@@ -93,15 +101,12 @@ readonly class TelegramChannelService
 		string $channel_id,
 	): array
 	{
-
 		try {
 
-			 $response = $this->httpClientService->performRequest(
+			return $this->httpClientService->performRequest(
 				HttpRequestMethodsEnum::METHOD_GET->value,
 				TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value . "/$channel_id"
 			);
-
-			return $response;
 
 		} catch (Throwable $th) {
 			report($th);
