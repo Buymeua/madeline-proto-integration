@@ -1,33 +1,30 @@
-# Laravel package for integration with MadelineProto 
+# Команды для создания нового релиза
 
-This package helps integrate MadelineProto in existing BuymeUa project
+> **⚠️ ВАЖНО: Обязательно обновите версию в файле `composer.json` перед созданием релиза!**
 
-## Installation
-
-- You can install this package via composer using this command:
+## Обновление версии и создание тега
 
 ```bash
-composer buyme/madeline-proto-integration
+# 1. Коммит изменения версии
+git add composer.json && git commit -m "chore: bump version to 1.2.2"
+
+# 2. Создание тега
+git tag -a v1.2.2 -m "Release version 1.2.2"
+
+# 3. Пуш изменений и тега
+# Если вы на feature ветке - сначала пушим текущую ветку
+git push origin HEAD
+
+# Затем переключаемся на main и мержим (если нужно)
+# git checkout main
+# git merge feature/your-branch
+
+# Или если уже на main:
+git push origin main
+
+# Пушим тег
+git push origin v1.2.2
 ```
 
-- The package will automatically register itself.
-
-- You can publish the config file using the following command:
-
-```bash
-php artisan vendor:publish --provider="Buyme\MadelineProtoIntegration\Providers\MadelineProtoIntegrationServiceProvider"
-```
-
-This will create the package's config file called `madeline-proto-integration.php` in the `config` directory. These are the contents of the published config file:
-
-## Testing
-
-You can run the tests with:
-
-```bash
-vendor/bin/phpunit
-```
-
-## License
-
-The MIT License (MIT). Please see the [License File](LICENSE.txt) for more information.
+## Packagist обновится автоматически
+После пуша тега, Packagist автоматически обнаружит новую версию через webhook.
