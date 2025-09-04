@@ -16,19 +16,19 @@ readonly class TelegramChannelService
 	}
 
 	public function store(
-		string        $admin_bot_id,
+		string        $adminBotId,
 		string        $title,
 		?string       $description = null,
-		?string       $username_channel = null,
+		?string       $usernameChannel = null,
 		?UploadedFile $photo = null,
 	): array
 	{
 
 		$requestParams = [
-			'admin_bot_id' => $admin_bot_id,
+			'admin_bot_id' => $adminBotId,
 			'title' => $title,
 			'description' => $description,
-			'username_channel' => $username_channel
+			'username_channel' => $usernameChannel
 		];
 
 		try {
@@ -58,21 +58,20 @@ readonly class TelegramChannelService
 	}
 
 	public function update(
-		string        $channel_id,
+		string        $channelId,
 		?string       $title,
 		?string       $description,
-		?string       $username_channel,
+		?string       $usernameChannel,
 		?UploadedFile $photo,
 	): array
 	{
 		$requestParams = [
-			'title' => $title,
-			'description' => $description,
-			'username_channel' => $username_channel,
+			'title' => $title ?? null,
+			'description' => $description ?? null,
+			'username_channel' => $usernameChannel ?? null,
 		];
 
 		try {
-
 			$files = [];
 
 			if ($photo instanceof UploadedFile) {
@@ -85,7 +84,7 @@ readonly class TelegramChannelService
 
 			return $this->httpClientService->performMultipartRequest(
 				method: HttpRequestMethodsEnum::METHOD_POST->value,
-				uri: TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value . "/$channel_id",
+				uri: TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value . "/$channelId",
 				data: $requestParams,
 				files: $files
 			);
@@ -98,14 +97,14 @@ readonly class TelegramChannelService
 	}
 
 	public function show(
-		string $channel_id,
+		string $channelId,
 	): array
 	{
 		try {
 
 			return $this->httpClientService->performRequest(
 				HttpRequestMethodsEnum::METHOD_GET->value,
-				TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value . "/$channel_id"
+				TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value . "/$channelId"
 			);
 
 		} catch (Throwable $th) {
