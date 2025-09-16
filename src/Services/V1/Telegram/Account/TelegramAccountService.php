@@ -5,6 +5,7 @@ namespace Buyme\MadelineProtoIntegration\Services\V1\Telegram\Account;
 use Buyme\MadelineProtoIntegration\Enum\Http\HttpRequestMethodsEnum;
 use Buyme\MadelineProtoIntegration\Enum\Telegram\Endpoints\V1\Account\TelegramAccountEndpointsEnum;
 use Buyme\MadelineProtoIntegration\Services\V1\Http\MadelineHttpClientService;
+use Throwable;
 
 class TelegramAccountService
 {
@@ -12,7 +13,7 @@ class TelegramAccountService
 	{
 	}
 
-	public function accounts(): array
+	public function accounts(): array|bool
 	{
 		try {
 
@@ -21,10 +22,10 @@ class TelegramAccountService
 				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT->value
 			);
 
-		} catch (\Throwable $th) {
+		} catch (Throwable $th) {
 			report($th);
 
-			throw $th;
+			return false;
 		}
 	}
 
@@ -50,6 +51,31 @@ class TelegramAccountService
 			return $this->httpClientService->performRequest(
 				HttpRequestMethodsEnum::METHOD_POST->value,
 				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT->value,
+				$requestParams
+			);
+
+		} catch (Throwable $th) {
+			report($th);
+
+			throw $th;
+		}
+	}
+
+	public function submitCode(
+		int $accountId,
+		int $code,
+	)
+	{
+		$requestParams = [
+			"accountId" => $accountId,
+			"code" => $code,
+		];
+
+		try {
+
+			return $this->httpClientService->performRequest(
+				HttpRequestMethodsEnum::METHOD_POST->value,
+				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_SUBMIT_CODE->endpointSubmitCode($accountId),
 				$requestParams
 			);
 
