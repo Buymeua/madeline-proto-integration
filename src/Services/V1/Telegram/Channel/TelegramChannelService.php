@@ -42,7 +42,7 @@ readonly class TelegramChannelService
 					'mime' => $photo->getMimeType(),
 				];
 
-				return $this->httpClientService->performMultipartRequest(
+				return $this->httpClientService->performMultipartRequestMultipleAccounts(
 					method: HttpRequestMethodsEnum::METHOD_POST->value,
 					uri: TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value,
 					data: $requestParams,
@@ -50,11 +50,10 @@ readonly class TelegramChannelService
 				);
 			}
 
-			return $this->httpClientService->performRequest(
+			return $this->httpClientService->performRequestMultipleAccounts(
 				method: HttpRequestMethodsEnum::METHOD_POST->value,
 				uri: TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value,
 				params: $requestParams
-
 			);
 
 		} catch (Throwable $th) {
