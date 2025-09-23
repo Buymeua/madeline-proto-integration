@@ -1,58 +1,58 @@
 {
-    "name": "buyme/madeline-proto-integration",
-    "version": "1.4.0",
-    "description": "Laravel package for the MadelineProto microservice in BuymeUa",
-    "type": "library",
-    "keywords": [
-        "laravel",
-        "package",
-        "madeline-proto"
-    ],
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Developer",
-            "email": "info@buymeua.com"
-        }
-    ],
-    "autoload": {
-        "psr-4": {
-            "Buyme\\MadelineProtoIntegration\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Buyme\\MadelineProtoIntegration\\Tests\\": "tests/"
-        }
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true,
-    "config": {
-        "sort-packages": true
-    },
-    "require": {
-        "php": "^8.2",
-        "guzzlehttp/guzzle": "^7.9",
-        "illuminate/cache": "9.*",
-        "illuminate/support": "9.*"
-    },
-    "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.73",
-        "mockery/mockery": "^1.6",
-        "orchestra/testbench": "^7.53",
-        "phpunit/phpunit": "^9.6"
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Buyme\\MadelineProtoIntegration\\Providers\\MadelineProtoIntegrationServiceProvider"
-            ],
-            "aliases": {
-                "MPIAuth": "Buyme\\MadelineProtoIntegration\\Facades\\MPIAuth",
-                "MPIUser": "Buyme\\MadelineProtoIntegration\\Facades\\MPIUser",
-                "MPIMessage": "Buyme\\MadelineProtoIntegration\\Facades\\MPIMessage",
-                "MPIContact": "Buyme\\MadelineProtoIntegration\\Facades\\MPIContact"
-            }
-        }
-    }
+	"name": "buyme/madeline-proto-integration",
+	"version": "1.4.0",
+	"description": "Laravel package for the MadelineProto microservice in BuymeUa",
+	"type": "library",
+	"keywords": [
+		"laravel",
+		"package",
+		"madeline-proto"
+	],
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Developer",
+			"email": "info@buymeua.com"
+		}
+	],
+	"autoload": {
+		"psr-4": {
+			"Buyme\\MadelineProtoIntegration\\": "src/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Buyme\\MadelineProtoIntegration\\Tests\\": "tests/"
+		}
+	},
+	"minimum-stability": "dev",
+	"prefer-stable": true,
+	"config": {
+		"sort-packages": true
+	},
+	"require": {
+		"php": "^8.2",
+		"guzzlehttp/guzzle": "^7.9",
+		"illuminate/cache": "^9.0|^10.0",
+		"illuminate/support": "^9.0|^10.0"
+	},
+	"require-dev": {
+		"friendsofphp/php-cs-fixer": "^3.73",
+		"mockery/mockery": "^1.6",
+		"orchestra/testbench": "^7.53|^8.0",
+		"phpunit/phpunit": "^9.6"
+	},
+	"extra": {
+		"laravel": {
+			"providers": [
+				"Buyme\\MadelineProtoIntegration\\Providers\\MadelineProtoIntegrationServiceProvider"
+			],
+			"aliases": {
+				"MPIAuth": "Buyme\\MadelineProtoIntegration\\Facades\\MPIAuth",
+				"MPIUser": "Buyme\\MadelineProtoIntegration\\Facades\\MPIUser",
+				"MPIMessage": "Buyme\\MadelineProtoIntegration\\Facades\\MPIMessage",
+				"MPIContact": "Buyme\\MadelineProtoIntegration\\Facades\\MPIContact"
+			}
+		}
+	}
 }
