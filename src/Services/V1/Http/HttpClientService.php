@@ -10,162 +10,209 @@ use Buyme\MadelineProtoIntegration\Enum\Telegram\MessageCodesEnum;
 use Buyme\MadelineProtoIntegration\Exceptions\Auth\MadelineNoAuthSessionException;
 use Buyme\MadelineProtoIntegration\Exceptions\Auth\MadelineNotLoggedInException;
 use Buyme\MadelineProtoIntegration\Exceptions\MadelineRequestException;
+use Buyme\MadelineProtoIntegration\Models\MpiAccountUser;
 use Buyme\MadelineProtoIntegration\Services\V1\Auth\AuthTokenService;
 use Buyme\MadelineProtoIntegration\Traits\GuzzleHttp\GuzzleHttpResponseTrait;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 use Psr\Http\Message\ResponseInterface;
 
 readonly class HttpClientService implements HttpClientServiceInterface
 {
-    use GuzzleHttpResponseTrait;
+	use GuzzleHttpResponseTrait;
 
-    public function __construct(private AuthTokenService $authTokenService)
-    {
-    }
+	public function __construct(private AuthTokenService $authTokenService)
+	{
+	}
 
-    public function performRequest(string $method, string $uri, array $params = [], array $headers = []): array
-    {
-        $baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
+	public function performRequest(string $method, string $uri, array $params = [], array $headers = []): array
+	{
+		$baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
 
-        $client = new Client(['base_uri' => $baseUri . '\\']);
+		$client = new Client(['base_uri' => $baseUri . '\\']);
 
-        $requestUri = trim($uri, ' \\');
+		$requestUri = trim($uri, ' \\');
 
-        $this->applyDefaultHeaders($headers);
+		$this->applyDefaultHeaders($headers);
 
-        $requestOptions = [
-            'headers' => $headers,
-        ];
+		$requestOptions = [
+			'headers' => $headers,
+		];
 
-        $this->prepareParams($method, $params, $requestUri, $requestOptions);
+		$this->prepareParams($method, $params, $requestUri, $requestOptions);
 
-        try {
-            $response = $client->request($method, $requestUri, $requestOptions);
+		try {
+			$response = $client->request($method, $requestUri, $requestOptions);
 
-            return $this->getResponseContent($response);
-        } catch (RequestException $exception) {
-            $decodedContent = $this->getRequestExceptionContent($exception);
-            $messageCode = strval(Arr::get($decodedContent, 'message_code'));
+			return $this->getResponseContent($response);
+		} catch (RequestException $exception) {
+			$decodedContent = $this->getRequestExceptionContent($exception);
+			$messageCode = strval(Arr::get($decodedContent, 'message_code'));
 
-            $customException = match ($messageCode) {
-                MessageCodesEnum::NOT_LOGGED_IN->value => MadelineNotLoggedInException::class,
-                MessageCodesEnum::NO_AUTH_SESSION->value => MadelineNoAuthSessionException::class,
-                default => null,
-            };
+			$customException = match ($messageCode) {
+				MessageCodesEnum::NOT_LOGGED_IN->value => MadelineNotLoggedInException::class,
+				MessageCodesEnum::NO_AUTH_SESSION->value => MadelineNoAuthSessionException::class,
+				default => null,
+			};
 
-            if (is_null($customException)) {
-                throw new MadelineRequestException(
-                    strval(Arr::get($decodedContent, 'message')),
-                    $exception->getCode(),
-                    $exception,
-                    $messageCode
-                );
-            }
+			if (is_null($customException)) {
+				throw new MadelineRequestException(
+					strval(Arr::get($decodedContent, 'message')),
+					$exception->getCode(),
+					$exception,
+					$messageCode
+				);
+			}
 
-            throw new $customException;
-        }
-    }
+			throw new $customException;
+		}
+	}
 
-    public function performMultipartRequest(string $method, string $uri, array $data = [], array $files = [], array $headers = []): array
-    {
-        $baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
+	public function tryPerformRequest(string $method, string $uri, array $params = [], array $headers = []): array
+	{
+		$users = MpiAccountUser::all();
 
-        $client = new Client(['base_uri' => $baseUri . '\\']);
+		$baseUri = rtrim((string)config('madeline-proto-integration.url'), '/');
+		$client = new Client(['base_uri' => $baseUri . '/']);
 
-        $requestUri = trim($uri, ' \\');
+		$requestUri = ltrim($uri, '/');
 
-        $this->applyDefaultHeaders($headers,false);
+		foreach ($users as $user) {
+			$requestHeaders = $headers;
+			$this->newApplyDefaultHeaders($requestHeaders);
+			$requestHeaders['Authorization'] = sprintf('Bearer %s', $user->token);
 
-        $multipart = [];
+			$requestOptions = ['headers' => $requestHeaders];
+			$this->prepareParams($method, $params, $requestUri, $requestOptions);
 
-        foreach ($data as $name => $value) {
-            $multipart[] = [
-                'name' => $name,
-                'contents' => (string) $value,
-            ];
-        }
+			try {
+				$response = $client->request($method, $requestUri, $requestOptions);
+				return $this->getResponseContent($response);
 
-        foreach ($files as $name => $file) {
-            $multipart[] = [
-                'name' => $name,
-                'contents' => fopen($file['path'], 'r'),
-                'filename' => $file['name'] ?? basename($file['path']),
-                'headers' => [
-                    'Content-Type' => $file['mime'] ?? 'application/octet-stream',
-                ],
-            ];
-        }
+			} catch (\GuzzleHttp\Exception\RequestException $e) {
+				$status = $e->getResponse()?->getStatusCode();
 
-        $requestOptions = [
-            'headers' => $headers,
-            'multipart' => $multipart,
-            'timeout' => 180,
-        ];
+				if ($status === 401) {
+					Log::warning("Token {$user->id} not authenticated, skipping...");
+					continue;
+				}
 
-        try {
-            $response = $client->request($method, $requestUri, $requestOptions);
+				throw $e;
+			}
+		}
 
-            return $this->getResponseContent($response);
-        } catch (RequestException $exception) {
-            $decodedContent = $this->getRequestExceptionContent($exception);
-            $messageCode = strval(Arr::get($decodedContent, 'message_code'));
+		throw new MadelineNotLoggedInException('All tokens failed');
+	}
 
-            $customException = match ($messageCode) {
-                MessageCodesEnum::NOT_LOGGED_IN->value => MadelineNotLoggedInException::class,
-                MessageCodesEnum::NO_AUTH_SESSION->value => MadelineNoAuthSessionException::class,
-                default => null,
-            };
+	public function performMultipartRequest(string $method, string $uri, array $data = [], array $files = [], array $headers = []): array
+	{
+		$baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
 
-            if (is_null($customException)) {
-                throw new MadelineRequestException(
-                    strval(Arr::get($decodedContent, 'message')),
-                    $exception->getCode(),
-                    $exception,
-                    $messageCode
-                );
-            }
+		$client = new Client(['base_uri' => $baseUri . '\\']);
 
-            throw new $customException;
-        }
-    }
+		$requestUri = trim($uri, ' \\');
 
-    protected function getResponseContent(ResponseInterface $response): array
-    {
-        $content = $response->getBody()->getContents();
-        $decodedContent = json_decode($content, true);
+		$this->applyDefaultHeaders($headers, false);
 
-        return ($decodedContent) ?: [];
-    }
+		$multipart = [];
 
-    protected function prepareParams(
-        string $method,
-        array $params,
-        string &$requestUri,
-        array &$requestOptions,
-    ): void {
-        if (in_array($method, [HttpRequestMethodsEnum::METHOD_POST, HttpRequestMethodsEnum::METHOD_PUT])) {
-            $requestOptions['body'] = json_encode($params);
+		foreach ($data as $name => $value) {
+			$multipart[] = [
+				'name' => $name,
+				'contents' => (string)$value,
+			];
+		}
 
-            return;
-        }
+		foreach ($files as $name => $file) {
+			$multipart[] = [
+				'name' => $name,
+				'contents' => fopen($file['path'], 'r'),
+				'filename' => $file['name'] ?? basename($file['path']),
+				'headers' => [
+					'Content-Type' => $file['mime'] ?? 'application/octet-stream',
+				],
+			];
+		}
 
-        $queryParams = http_build_query($params);
-        $requestUri .= '?' . $queryParams;
-    }
+		$requestOptions = [
+			'headers' => $headers,
+			'multipart' => $multipart,
+			'timeout' => 180,
+		];
 
-    protected function applyDefaultHeaders(array &$headers, bool $forceJson = true): void
-    {
-        if ($forceJson) {
-            $headers['Content-Type'] = 'application/json';
-            $headers['Accept'] = 'application/json';
-        }
+		try {
+			$response = $client->request($method, $requestUri, $requestOptions);
 
-        $authToken = $this->authTokenService->getAuthToken();
+			return $this->getResponseContent($response);
+		} catch (RequestException $exception) {
+			$decodedContent = $this->getRequestExceptionContent($exception);
+			$messageCode = strval(Arr::get($decodedContent, 'message_code'));
 
-        if ($authToken) {
-            $headers['Authorization'] = sprintf('Bearer %s', $authToken);
-        }
-    }
+			$customException = match ($messageCode) {
+				MessageCodesEnum::NOT_LOGGED_IN->value => MadelineNotLoggedInException::class,
+				MessageCodesEnum::NO_AUTH_SESSION->value => MadelineNoAuthSessionException::class,
+				default => null,
+			};
+
+			if (is_null($customException)) {
+				throw new MadelineRequestException(
+					strval(Arr::get($decodedContent, 'message')),
+					$exception->getCode(),
+					$exception,
+					$messageCode
+				);
+			}
+
+			throw new $customException;
+		}
+	}
+
+	protected function getResponseContent(ResponseInterface $response): array
+	{
+		$content = $response->getBody()->getContents();
+		$decodedContent = json_decode($content, true);
+
+		return ($decodedContent) ?: [];
+	}
+
+	protected function prepareParams(
+		string $method,
+		array  $params,
+		string &$requestUri,
+		array  &$requestOptions,
+	): void
+	{
+		if (in_array($method, [HttpRequestMethodsEnum::METHOD_POST, HttpRequestMethodsEnum::METHOD_PUT])) {
+			$requestOptions['body'] = json_encode($params);
+
+			return;
+		}
+
+		$queryParams = http_build_query($params);
+		$requestUri .= '?' . $queryParams;
+	}
+
+	protected function applyDefaultHeaders(array &$headers, bool $forceJson = true): void
+	{
+		if ($forceJson) {
+			$headers['Content-Type'] = 'application/json';
+			$headers['Accept'] = 'application/json';
+		}
+
+		$authToken = $this->authTokenService->getAuthToken();
+
+		if ($authToken) {
+			$headers['Authorization'] = sprintf('Bearer %s', $authToken);
+		}
+	}
+
+	protected function newApplyDefaultHeaders(array &$headers, bool $forceJson = true): void
+	{
+		if ($forceJson) {
+			$headers['Content-Type'] = 'application/json';
+			$headers['Accept'] = 'application/json';
+		}
+	}
 }

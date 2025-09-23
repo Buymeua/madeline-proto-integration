@@ -15,6 +15,9 @@ readonly class TelegramChannelService
 	{
 	}
 
+	/**
+	 * @throws Throwable
+	 */
 	public function store(
 		string        $adminBotId,
 		string        $title,
@@ -41,13 +44,19 @@ readonly class TelegramChannelService
 					'name' => $photo->getClientOriginalName(),
 					'mime' => $photo->getMimeType(),
 				];
+
+				return $this->httpClientService->performMultipartRequest(
+					method: HttpRequestMethodsEnum::METHOD_POST->value,
+					uri: TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value,
+					data: $requestParams,
+					files: $files
+				);
 			}
 
-			return $this->httpClientService->performMultipartRequest(
+			return $this->httpClientService->newPerformRequest(
 				method: HttpRequestMethodsEnum::METHOD_POST->value,
 				uri: TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value,
-				data: $requestParams,
-				files: $files
+				params: $requestParams
 			);
 
 		} catch (Throwable $th) {
