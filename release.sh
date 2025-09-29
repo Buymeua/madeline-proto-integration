@@ -15,7 +15,7 @@ if [ ! -f "composer.json" ]; then
 fi
 
 # Извлекаем версию из composer.json
-VERSION=$(grep -Po '"version":\s*"\K[^"]*' composer.json)
+VERSION=$(jq -r '.version' composer.json)
 
 if [ -z "$VERSION" ]; then
     echo -e "${RED}❌ Не удалось извлечь версию из composer.json${NC}"
@@ -68,7 +68,7 @@ if [[ "$CURRENT_BRANCH" != "main" ]] && [[ "$CURRENT_BRANCH" != "master" ]]; the
     echo -e "${YELLOW}📤 Пушим ветку ${CURRENT_BRANCH}...${NC}"
     git push origin "$CURRENT_BRANCH"
     echo -e "${GREEN}✅ Ветка ${CURRENT_BRANCH} запушена${NC}"
-    
+
     echo -e "${YELLOW}⚠️  Вы находитесь на ветке ${CURRENT_BRANCH}. Хотите переключиться на main и смержить? (y/n)${NC}"
     read -r response
     if [[ "$response" =~ ^[Yy]$ ]]; then
@@ -78,7 +78,7 @@ if [[ "$CURRENT_BRANCH" != "main" ]] && [[ "$CURRENT_BRANCH" != "master" ]]; the
             git add -A
             git commit -m "chore: save local changes before switching branches"
         fi
-        
+
         git checkout main
         git merge "$CURRENT_BRANCH"
         git push origin main
