@@ -88,7 +88,7 @@ readonly class TelegramChannelService
 				];
 			}
 
-			return $this->httpClientService->performMultipartRequest(
+			return $this->httpClientService->performMultipartRequestMultipleAccounts(
 				method: HttpRequestMethodsEnum::METHOD_POST->value,
 				uri: TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value . "/$channelId",
 				data: $requestParams,
@@ -108,7 +108,7 @@ readonly class TelegramChannelService
 	{
 		try {
 
-			return $this->httpClientService->performRequest(
+			return $this->httpClientService->performRequestMultipleAccounts(
 				HttpRequestMethodsEnum::METHOD_GET->value,
 				TelegramChannelEndpointsEnum::TELEGRAM_CHANNEL->value . "/$channelId"
 			);
