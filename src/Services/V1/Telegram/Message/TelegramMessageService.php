@@ -23,12 +23,17 @@ readonly class TelegramMessageService
         array|int|string $peer,
         string $message,
         ParseMode $parseMode = ParseMode::TEXT,
+        bool $markAsUnread = false,
     ): bool {
         $requestParams = [
             'peer' => $peer,
             'message' => $message,
             'parse_mode' => $parseMode->value,
         ];
+
+        if ($markAsUnread) {
+            $requestParams['mark_as_unread'] = true;
+        }
 
         try {
             $response = $this->httpClientService->performRequest(
