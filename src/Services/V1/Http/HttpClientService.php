@@ -139,19 +139,20 @@ readonly class HttpClientService implements HttpClientServiceInterface
 	 */
 	public function performRequestMultipleAccounts(string $method, string $uri, array $params = [], array $headers = []): array
 	{
-		$users = MpiAccountUser::get();
+		$users = MpiAccountUser::query()
+			->orderBy('is_banned')
+			->get();
 
 		$baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
 
 		$client = new Client(['base_uri' => $baseUri . '\\']);
-
-		$requestUri = trim($uri, ' \\');
 
 		$this->applyDefaultHeadersWithoutToken($headers);
 
 		$errors = [];
 
 		foreach ($users as $user) {
+			$requestUri = trim($uri, ' \\');
 			$headers['Authorization'] = sprintf('Bearer %s', $user->token);
 
 			$requestOptions = [
@@ -168,19 +169,15 @@ readonly class HttpClientService implements HttpClientServiceInterface
 				$decodedContent = $this->getRequestExceptionContent($exception);
 				$messageCode = strval(Arr::get($decodedContent, 'message_code'));
 
-				$customException = match ($messageCode) {
-					MessageCodesEnum::NOT_LOGGED_IN->value => MadelineNotLoggedInException::class,
-					MessageCodesEnum::NO_AUTH_SESSION->value => MadelineNoAuthSessionException::class,
-					default => null,
-				};
+				if ($exception->getCode() === 503) {
+					$user->markAsBanned();
+				}
 
 				$errors[] = [
 					'user_id' => $user->id,
 					'message_code' => $messageCode,
 					'error' => $exception->getMessage(),
 				];
-
-//				if (is_null($customException)) {}
 			}
 		}
 
@@ -204,17 +201,19 @@ readonly class HttpClientService implements HttpClientServiceInterface
 		array  $headers = []
 	): array
 	{
-		$users = MpiAccountUser::get();
+		$users = MpiAccountUser::query()
+			->orderBy('is_banned')
+			->get();
 
 		$baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
 		$client = new Client(['base_uri' => $baseUri . '\\']);
-		$requestUri = trim($uri, ' \\');
 
 		$this->applyDefaultHeadersWithoutToken($headers, false);
 
 		$errors = [];
 
 		foreach ($users as $user) {
+			$requestUri = trim($uri, ' \\');
 			$headers['Authorization'] = sprintf('Bearer %s', $user->token);
 
 			$multipart = [];
@@ -247,25 +246,19 @@ readonly class HttpClientService implements HttpClientServiceInterface
 				$response = $client->request($method, $requestUri, $requestOptions);
 
 				return $this->getResponseContent($response);
-
 			} catch (RequestException $exception) {
 				$decodedContent = $this->getRequestExceptionContent($exception);
 				$messageCode = strval(Arr::get($decodedContent, 'message_code'));
 
-				$customException = match ($messageCode) {
-					MessageCodesEnum::NOT_LOGGED_IN->value => MadelineNotLoggedInException::class,
-					MessageCodesEnum::NO_AUTH_SESSION->value => MadelineNoAuthSessionException::class,
-					default => null,
-				};
+				if ($exception->getCode() === 503) {
+					$user->markAsBanned();
+				}
 
 				$errors[] = [
 					'user_id' => $user->id,
 					'message_code' => $messageCode,
 					'error' => $exception->getMessage(),
 				];
-
-//				if (!is_null($customException)) {}
-
 			}
 		}
 

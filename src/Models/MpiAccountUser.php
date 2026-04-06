@@ -11,8 +11,18 @@ class MpiAccountUser extends Model
 	protected $fillable = [
 		'login',
 		'password',
-		'token'
+		'token',
+		'is_banned',
+		'banned_at',
 	];
+
+	protected function casts(): array
+	{
+		return [
+			'is_banned' => 'boolean',
+			'banned_at' => 'datetime',
+		];
+	}
 
 	protected function password(): Attribute
 	{
@@ -22,4 +32,19 @@ class MpiAccountUser extends Model
 		);
 	}
 
+	public function markAsBanned(): void
+	{
+		$this->update([
+			'is_banned' => true,
+			'banned_at' => now(),
+		]);
+	}
+
+	public function markAsUnbanned(): void
+	{
+		$this->update([
+			'is_banned' => false,
+			'banned_at' => null,
+		]);
+	}
 }

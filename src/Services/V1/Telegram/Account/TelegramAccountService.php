@@ -85,4 +85,32 @@ class TelegramAccountService
 			throw $th;
 		}
 	}
+
+	public function status(int $accountId): array|bool
+	{
+		try {
+			return $this->httpClientService->performRequest(
+				HttpRequestMethodsEnum::METHOD_GET->value,
+				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_STATUS->withAccountId($accountId)
+			);
+		} catch (Throwable $th) {
+			report($th);
+
+			return false;
+		}
+	}
+
+	public function unban(int $accountId): array|bool
+	{
+		try {
+			return $this->httpClientService->performRequest(
+				HttpRequestMethodsEnum::METHOD_POST->value,
+				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_UNBAN->withAccountId($accountId)
+			);
+		} catch (Throwable $th) {
+			report($th);
+
+			return false;
+		}
+	}
 }

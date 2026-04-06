@@ -36,7 +36,7 @@ readonly class TelegramMessageService
         }
 
         try {
-            $response = $this->httpClientService->performRequest(
+            $response = $this->httpClientService->performRequestMultipleAccounts(
                 HttpRequestMethodsEnum::METHOD_POST->value,
                 TelegramMessageEndpointsEnum::SEND_SIMPLE_MESSAGE->value,
                 $requestParams
@@ -67,7 +67,7 @@ readonly class TelegramMessageService
         ];
 
         try {
-            $response = $this->httpClientService->performRequest(
+            $response = $this->httpClientService->performRequestMultipleAccounts(
                 HttpRequestMethodsEnum::METHOD_POST->value,
                 TelegramMessageEndpointsEnum::SEND_MEDIA_MESSAGE->value,
                 $requestParams
@@ -91,7 +91,7 @@ readonly class TelegramMessageService
         ?string $message = null,
     ): bool {
         try {
-            $response = $this->httpClientService->performMultipartRequest(
+            $response = $this->httpClientService->performMultipartRequestMultipleAccounts(
                 method: HttpRequestMethodsEnum::METHOD_POST->value,
                 uri: TelegramMessageEndpointsEnum::SEND_UPLOADED_FILE_MESSAGE->value,
                 data: [
