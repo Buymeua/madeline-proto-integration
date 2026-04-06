@@ -113,4 +113,18 @@ class TelegramAccountService
 			return false;
 		}
 	}
+
+	public function reAuth(int $accountId): array|bool
+	{
+		try {
+			return $this->httpClientService->performRequest(
+				HttpRequestMethodsEnum::METHOD_POST->value,
+				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_RE_AUTH->withAccountId($accountId)
+			);
+		} catch (Throwable $th) {
+			report($th);
+
+			return false;
+		}
+	}
 }

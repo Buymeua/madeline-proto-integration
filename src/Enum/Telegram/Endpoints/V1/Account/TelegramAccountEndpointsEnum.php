@@ -10,6 +10,7 @@ enum TelegramAccountEndpointsEnum: string
 	case TELEGRAM_ACCOUNT_SUBMIT_CODE = 'v1/telegram/accounts/%s/submit-code';
 	case TELEGRAM_ACCOUNT_STATUS = 'v1/telegram/accounts/%s/status';
 	case TELEGRAM_ACCOUNT_UNBAN = 'v1/telegram/accounts/%s/unban';
+	case TELEGRAM_ACCOUNT_RE_AUTH = 'v1/telegram/accounts/%s/re-auth';
 
 	public function endpointSubmitCode(string|int $accountId = null): string
 	{
