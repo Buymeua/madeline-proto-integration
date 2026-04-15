@@ -127,4 +127,23 @@ class TelegramAccountService
 			return false;
 		}
 	}
+
+	public function submit2FA(int $accountId, string $password): array
+	{
+		$requestParams = [
+			'password' => $password,
+		];
+
+		try {
+			return $this->httpClientService->performRequest(
+				HttpRequestMethodsEnum::METHOD_POST->value,
+				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_SUBMIT_2FA->withAccountId($accountId),
+				$requestParams
+			);
+		} catch (Throwable $th) {
+			report($th);
+
+			throw $th;
+		}
+	}
 }
