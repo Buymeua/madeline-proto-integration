@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Buyme\MadelineProtoIntegration\Services\V1\Telegram\Account;
 
 use Buyme\MadelineProtoIntegration\Enum\Http\HttpRequestMethodsEnum;
@@ -9,141 +11,132 @@ use Throwable;
 
 class TelegramAccountService
 {
-	public function __construct(private MadelineHttpClientService $httpClientService)
-	{
-	}
+    public function __construct(private MadelineHttpClientService $httpClientService)
+    {
+    }
 
-	public function accounts(): array|bool
-	{
-		try {
+    public function accounts(): array|bool
+    {
+        try {
+            return $this->httpClientService->performRequest(
+                HttpRequestMethodsEnum::METHOD_GET->value,
+                TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT->value
+            );
+        } catch (Throwable $th) {
+            report($th);
 
-			return $this->httpClientService->performRequest(
-				HttpRequestMethodsEnum::METHOD_GET->value,
-				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT->value
-			);
+            return false;
+        }
+    }
 
-		} catch (Throwable $th) {
-			report($th);
+    public function store(
+        string $login,
+        string $password,
+        string $phone,
+        string $api_id,
+        string $api_hash,
+    ): array {
+        $requestParams = [
+            'login' => $login,
+            'password' => $password,
+            'phone' => $phone,
+            'api_id' => $api_id,
+            'api_hash' => $api_hash,
+        ];
 
-			return false;
-		}
-	}
+        try {
+            return $this->httpClientService->performRequest(
+                HttpRequestMethodsEnum::METHOD_POST->value,
+                TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT->value,
+                $requestParams
+            );
+        } catch (Throwable $th) {
+            report($th);
 
-	public function store(
-		string $login,
-		string $password,
-		string $phone,
-		string $api_id,
-		string $api_hash,
-	): array
-	{
+            throw $th;
+        }
+    }
 
-		$requestParams = [
-			"login" => $login,
-			"password" => $password,
-			"phone" => $phone,
-			"api_id" => $api_id,
-			"api_hash" => $api_hash,
-		];
+    public function submitCode(
+        int $accountId,
+        int $code,
+    ) {
+        $requestParams = [
+            'accountId' => $accountId,
+            'code' => $code,
+        ];
 
-		try {
+        try {
+            return $this->httpClientService->performRequest(
+                HttpRequestMethodsEnum::METHOD_POST->value,
+                TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_SUBMIT_CODE->endpointSubmitCode($accountId),
+                $requestParams
+            );
+        } catch (Throwable $th) {
+            report($th);
 
-			return $this->httpClientService->performRequest(
-				HttpRequestMethodsEnum::METHOD_POST->value,
-				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT->value,
-				$requestParams
-			);
+            throw $th;
+        }
+    }
 
-		} catch (Throwable $th) {
-			report($th);
+    public function status(int $accountId): array|bool
+    {
+        try {
+            return $this->httpClientService->performRequest(
+                HttpRequestMethodsEnum::METHOD_GET->value,
+                TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_STATUS->withAccountId($accountId)
+            );
+        } catch (Throwable $th) {
+            report($th);
 
-			throw $th;
-		}
-	}
+            return false;
+        }
+    }
 
-	public function submitCode(
-		int $accountId,
-		int $code,
-	)
-	{
-		$requestParams = [
-			"accountId" => $accountId,
-			"code" => $code,
-		];
+    public function unban(int $accountId): array|bool
+    {
+        try {
+            return $this->httpClientService->performRequest(
+                HttpRequestMethodsEnum::METHOD_POST->value,
+                TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_UNBAN->withAccountId($accountId)
+            );
+        } catch (Throwable $th) {
+            report($th);
 
-		try {
+            return false;
+        }
+    }
 
-			return $this->httpClientService->performRequest(
-				HttpRequestMethodsEnum::METHOD_POST->value,
-				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_SUBMIT_CODE->endpointSubmitCode($accountId),
-				$requestParams
-			);
+    public function reAuth(int $accountId): array|bool
+    {
+        try {
+            return $this->httpClientService->performRequest(
+                HttpRequestMethodsEnum::METHOD_POST->value,
+                TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_RE_AUTH->withAccountId($accountId)
+            );
+        } catch (Throwable $th) {
+            report($th);
 
-		} catch (Throwable $th) {
-			report($th);
+            return false;
+        }
+    }
 
-			throw $th;
-		}
-	}
+    public function submit2FA(int $accountId, string $password): array
+    {
+        $requestParams = [
+            'password' => $password,
+        ];
 
-	public function status(int $accountId): array|bool
-	{
-		try {
-			return $this->httpClientService->performRequest(
-				HttpRequestMethodsEnum::METHOD_GET->value,
-				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_STATUS->withAccountId($accountId)
-			);
-		} catch (Throwable $th) {
-			report($th);
+        try {
+            return $this->httpClientService->performRequest(
+                HttpRequestMethodsEnum::METHOD_POST->value,
+                TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_SUBMIT_2FA->withAccountId($accountId),
+                $requestParams
+            );
+        } catch (Throwable $th) {
+            report($th);
 
-			return false;
-		}
-	}
-
-	public function unban(int $accountId): array|bool
-	{
-		try {
-			return $this->httpClientService->performRequest(
-				HttpRequestMethodsEnum::METHOD_POST->value,
-				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_UNBAN->withAccountId($accountId)
-			);
-		} catch (Throwable $th) {
-			report($th);
-
-			return false;
-		}
-	}
-
-	public function reAuth(int $accountId): array|bool
-	{
-		try {
-			return $this->httpClientService->performRequest(
-				HttpRequestMethodsEnum::METHOD_POST->value,
-				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_RE_AUTH->withAccountId($accountId)
-			);
-		} catch (Throwable $th) {
-			report($th);
-
-			return false;
-		}
-	}
-
-	public function submit2FA(int $accountId, string $password): array
-	{
-		$requestParams = [
-			'password' => $password,
-		];
-
-		try {
-			return $this->httpClientService->performRequest(
-				HttpRequestMethodsEnum::METHOD_POST->value,
-				TelegramAccountEndpointsEnum::TELEGRAM_ACCOUNT_SUBMIT_2FA->withAccountId($accountId),
-				$requestParams
-			);
-		} catch (Throwable $th) {
-			report($th);
-
-			throw $th;
-		}
-	}
+            throw $th;
+        }
+    }
 }

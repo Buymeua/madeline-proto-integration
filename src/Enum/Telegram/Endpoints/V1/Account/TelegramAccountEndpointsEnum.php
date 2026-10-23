@@ -7,23 +7,23 @@ namespace Buyme\MadelineProtoIntegration\Enum\Telegram\Endpoints\V1\Account;
 enum TelegramAccountEndpointsEnum: string
 {
     case TELEGRAM_ACCOUNT = 'v1/telegram/accounts';
-	case TELEGRAM_ACCOUNT_SUBMIT_CODE = 'v1/telegram/accounts/%s/submit-code';
-	case TELEGRAM_ACCOUNT_STATUS = 'v1/telegram/accounts/%s/status';
-	case TELEGRAM_ACCOUNT_UNBAN = 'v1/telegram/accounts/%s/unban';
-	case TELEGRAM_ACCOUNT_RE_AUTH = 'v1/telegram/accounts/%s/re-auth';
-	case TELEGRAM_ACCOUNT_SUBMIT_2FA = 'v1/telegram/accounts/%s/submit-2fa';
+    case TELEGRAM_ACCOUNT_SUBMIT_CODE = 'v1/telegram/accounts/%s/submit-code';
+    case TELEGRAM_ACCOUNT_STATUS = 'v1/telegram/accounts/%s/status';
+    case TELEGRAM_ACCOUNT_UNBAN = 'v1/telegram/accounts/%s/unban';
+    case TELEGRAM_ACCOUNT_RE_AUTH = 'v1/telegram/accounts/%s/re-auth';
+    case TELEGRAM_ACCOUNT_SUBMIT_2FA = 'v1/telegram/accounts/%s/submit-2fa';
 
-	public function endpointSubmitCode(string|int|null $accountId = null): string
-	{
-		return match ($this) {
-			self::TELEGRAM_ACCOUNT => $this->value,
-			self::TELEGRAM_ACCOUNT_SUBMIT_CODE => sprintf($this->value, $accountId),
-			default => $this->value,
-		};
-	}
+    public function endpointSubmitCode(string|int|null $accountId = null): string
+    {
+        return match ($this) {
+            self::TELEGRAM_ACCOUNT => $this->value,
+            self::TELEGRAM_ACCOUNT_SUBMIT_CODE => sprintf($this->value, $accountId),
+            default => $this->value,
+        };
+    }
 
-	public function withAccountId(string|int $accountId): string
-	{
-		return sprintf($this->value, $accountId);
-	}
+    public function withAccountId(string|int $accountId): string
+    {
+        return sprintf($this->value, $accountId);
+    }
 }

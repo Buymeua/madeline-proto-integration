@@ -17,4 +17,3 @@ class MPIMessage extends Facade
         return 'mpi-message';
     }
 }
-
