@@ -20,6 +20,6 @@ trait GuzzleHttpResponseTrait
         $responseData = $responseBody->getContents();
         $responseBody->rewind();
 
-        return (array)json_decode(strval($responseData), true);
+        return (array) json_decode(strval($responseData), true);
     }
 }

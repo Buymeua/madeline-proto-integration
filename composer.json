@@ -30,16 +30,18 @@
         "sort-packages": true
     },
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "guzzlehttp/guzzle": "^7.9",
-        "illuminate/cache": "^9.0|^10.0|^11.0|^12.0|^13.0",
-        "illuminate/support": "^9.0|^10.0|^11.0|^12.0|^13.0"
+        "illuminate/cache": "^12.0|^13.0",
+        "illuminate/database": "^12.0|^13.0",
+        "illuminate/http": "^12.0|^13.0",
+        "illuminate/support": "^12.0|^13.0"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.73",
         "mockery/mockery": "^1.6",
-        "orchestra/testbench": "^7.53|^8.0",
-        "phpunit/phpunit": "^9.6"
+        "orchestra/testbench": "^10.0|^11.0",
+        "phpunit/phpunit": "^11.5|^12.0"
     },
     "extra": {
         "laravel": {
@@ -55,5 +57,9 @@
                 "MPIChannel": "Buyme\\MadelineProtoIntegration\\Facades\\MPIChannel"
             }
         }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "cs": "php-cs-fixer fix --dry-run --diff"
     }
 }

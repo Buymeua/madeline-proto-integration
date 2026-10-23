@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Buyme\MadelineProtoIntegration\Exceptions;
 
 use Exception;
-use Throwable;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Arr;
+use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class MadelineRequestException extends Exception
 {
