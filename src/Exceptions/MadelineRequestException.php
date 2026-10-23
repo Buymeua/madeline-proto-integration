@@ -46,6 +46,8 @@ class MadelineRequestException extends Exception
             })->all();
         }
 
-        return response()->json($data, $this->getCode());
+        $status = $this->getCode() >= 400 && $this->getCode() < 600 ? $this->getCode() : Response::HTTP_BAD_GATEWAY;
+
+        return response()->json($data, $status);
     }
 }

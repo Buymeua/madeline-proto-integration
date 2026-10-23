@@ -13,7 +13,7 @@ enum TelegramAccountEndpointsEnum: string
 	case TELEGRAM_ACCOUNT_RE_AUTH = 'v1/telegram/accounts/%s/re-auth';
 	case TELEGRAM_ACCOUNT_SUBMIT_2FA = 'v1/telegram/accounts/%s/submit-2fa';
 
-	public function endpointSubmitCode(string|int $accountId = null): string
+	public function endpointSubmitCode(string|int|null $accountId = null): string
 	{
 		return match ($this) {
 			self::TELEGRAM_ACCOUNT => $this->value,

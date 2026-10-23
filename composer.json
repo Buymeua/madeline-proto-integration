@@ -51,7 +51,8 @@
                 "MPIUser": "Buyme\\MadelineProtoIntegration\\Facades\\MPIUser",
                 "MPIMessage": "Buyme\\MadelineProtoIntegration\\Facades\\MPIMessage",
                 "MPIContact": "Buyme\\MadelineProtoIntegration\\Facades\\MPIContact",
-                "MPIAccount": "Buyme\\MadelineProtoIntegration\\Facades\\MPIAccount"
+                "MPIAccount": "Buyme\\MadelineProtoIntegration\\Facades\\MPIAccount",
+                "MPIChannel": "Buyme\\MadelineProtoIntegration\\Facades\\MPIChannel"
             }
         }
     }
