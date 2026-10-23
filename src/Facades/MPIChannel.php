@@ -1,13 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Buyme\MadelineProtoIntegration\Facades;
 
 use Illuminate\Support\Facades\Facade;
 
 class MPIChannel extends Facade
 {
-	protected static function getFacadeAccessor(): string
-	{
-		return 'mpi-channel';
-	}
+    protected static function getFacadeAccessor(): string
+    {
+        return 'mpi-channel';
+    }
 }

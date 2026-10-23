@@ -17,4 +17,3 @@ class MPIContact extends Facade
         return 'mpi-contact';
     }
 }
-

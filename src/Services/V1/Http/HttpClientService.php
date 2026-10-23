@@ -18,303 +18,198 @@ use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Arr;
 use Psr\Http\Message\ResponseInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 readonly class HttpClientService implements HttpClientServiceInterface
 {
-	use GuzzleHttpResponseTrait;
+    use GuzzleHttpResponseTrait;
 
-	public function __construct(private AuthTokenService $authTokenService)
-	{
-	}
+    /** Методы, у которых параметры уходят JSON-телом (остальные — query string) */
+    private const BODY_METHODS = [
+        HttpRequestMethodsEnum::METHOD_POST,
+        HttpRequestMethodsEnum::METHOD_PUT,
+        HttpRequestMethodsEnum::METHOD_PATCH,
+    ];
 
-	public function performRequest(string $method, string $uri, array $params = [], array $headers = []): array
-	{
-		$baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
+    private const MULTIPART_TIMEOUT_SECONDS = 180;
 
-		$client = new Client(['base_uri' => $baseUri . '\\']);
+    public function __construct(private AuthTokenService $authTokenService)
+    {
+    }
 
-		$requestUri = trim($uri, ' \\');
+    /**
+     * Запрос от имени основного аккаунта (токен из AuthTokenService).
+     *
+     * @throws MadelineRequestException
+     */
+    public function performRequest(string $method, string $uri, array $params = [], array $headers = []): array
+    {
+        return $this->send($method, $uri, $this->jsonOptions($method, $params, $this->withToken($headers, $this->authTokenService->getAuthToken())));
+    }
 
-		$this->applyDefaultHeaders($headers);
+    /**
+     * @throws MadelineRequestException
+     */
+    public function performMultipartRequest(string $method, string $uri, array $data = [], array $files = [], array $headers = []): array
+    {
+        return $this->send($method, $uri, $this->multipartOptions($data, $files, $this->withToken($headers, $this->authTokenService->getAuthToken(), json: false)));
+    }
 
-		$requestOptions = [
-			'headers' => $headers,
-		];
+    /**
+     * Перебирает аккаунты (не забаненные первыми), пока один не ответит успешно.
+     *
+     * @throws MadelineRequestException
+     */
+    public function performRequestMultipleAccounts(string $method, string $uri, array $params = [], array $headers = []): array
+    {
+        return $this->sendWithFailover(
+            $method,
+            $uri,
+            fn (MpiAccountUser $account) => $this->jsonOptions($method, $params, $this->withToken($headers, $account->token)),
+        );
+    }
 
-		$this->prepareParams($method, $params, $requestUri, $requestOptions);
+    /**
+     * @throws MadelineRequestException
+     */
+    public function performMultipartRequestMultipleAccounts(string $method, string $uri, array $data = [], array $files = [], array $headers = []): array
+    {
+        return $this->sendWithFailover(
+            $method,
+            $uri,
+            fn (MpiAccountUser $account) => $this->multipartOptions($data, $files, $this->withToken($headers, $account->token, json: false)),
+        );
+    }
 
-		try {
-			$response = $client->request($method, $requestUri, $requestOptions);
+    /**
+     * @param callable(MpiAccountUser): array{0: string, 1: array} $buildOptions
+     *
+     * @throws MadelineRequestException
+     */
+    private function sendWithFailover(string $method, string $uri, callable $buildOptions): array
+    {
+        $errors = [];
 
-			return $this->getResponseContent($response);
-		} catch (RequestException $exception) {
-			$decodedContent = $this->getRequestExceptionContent($exception);
-			$messageCode = strval(Arr::get($decodedContent, 'message_code'));
+        foreach (MpiAccountUser::query()->orderBy('is_banned')->get() as $account) {
+            try {
+                return $this->send($method, $uri, $buildOptions($account));
+            } catch (MadelineRequestException $exception) {
+                if ($this->isBanned($exception)) {
+                    $account->markAsBanned();
+                }
 
-			$customException = match ($messageCode) {
-				MessageCodesEnum::NOT_LOGGED_IN->value => MadelineNotLoggedInException::class,
-				MessageCodesEnum::NO_AUTH_SESSION->value => MadelineNoAuthSessionException::class,
-				default => null,
-			};
+                $errors[] = [
+                    'user_id' => $account->id,
+                    'message_code' => $exception->getErrorCode(),
+                    'error' => $exception->getMessage(),
+                ];
+            }
+        }
 
-			if (is_null($customException)) {
-				throw new MadelineRequestException(
-					strval(Arr::get($decodedContent, 'message')),
-					$exception->getCode(),
-					$exception,
-					$messageCode
-				);
-			}
+        throw new MadelineRequestException('All accounts failed', 0, null, json_encode($errors, JSON_UNESCAPED_UNICODE));
+    }
 
-			throw new $customException;
-		}
-	}
+    /**
+     * @param array{0: string, 1: array} $prepared [uri suffix, guzzle options]
+     *
+     * @throws MadelineRequestException
+     */
+    private function send(string $method, string $uri, array $prepared): array
+    {
+        [$query, $options] = $prepared;
 
-	public function performMultipartRequest(string $method, string $uri, array $data = [], array $files = [], array $headers = []): array
-	{
-		$baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
+        try {
+            $response = $this->client()->request($method, trim($uri, ' \\') . $query, $options);
 
-		$client = new Client(['base_uri' => $baseUri . '\\']);
+            return $this->getResponseContent($response);
+        } catch (RequestException $exception) {
+            throw $this->mapException($exception);
+        } catch (GuzzleException $exception) {
+            throw new MadelineRequestException($exception->getMessage(), (int) $exception->getCode(), $exception);
+        }
+    }
 
-		$requestUri = trim($uri, ' \\');
+    /**
+     * @return array{0: string, 1: array}
+     */
+    private function jsonOptions(string $method, array $params, array $headers): array
+    {
+        $options = ['headers' => $headers];
 
-		$this->applyDefaultHeaders($headers, false);
+        if (in_array(HttpRequestMethodsEnum::tryFrom(strtoupper($method)), self::BODY_METHODS, true)) {
+            return ['', [...$options, 'body' => json_encode($params, JSON_UNESCAPED_UNICODE)]];
+        }
 
-		$multipart = [];
+        return [$params === [] ? '' : '?' . http_build_query($params), $options];
+    }
 
-		foreach ($data as $name => $value) {
-			$multipart[] = [
-				'name' => $name,
-				'contents' => (string)$value,
-			];
-		}
+    /**
+     * @return array{0: string, 1: array}
+     */
+    private function multipartOptions(array $data, array $files, array $headers): array
+    {
+        $multipart = [];
 
-		foreach ($files as $name => $file) {
-			$multipart[] = [
-				'name' => $name,
-				'contents' => fopen($file['path'], 'r'),
-				'filename' => $file['name'] ?? basename($file['path']),
-				'headers' => [
-					'Content-Type' => $file['mime'] ?? 'application/octet-stream',
-				],
-			];
-		}
+        foreach ($data as $name => $value) {
+            $multipart[] = ['name' => $name, 'contents' => (string) $value];
+        }
 
-		$requestOptions = [
-			'headers' => $headers,
-			'multipart' => $multipart,
-			'timeout' => 180,
-		];
+        foreach ($files as $name => $file) {
+            $multipart[] = [
+                'name' => $name,
+                'contents' => fopen($file['path'], 'r'),
+                'filename' => $file['name'] ?? basename($file['path']),
+                'headers' => ['Content-Type' => $file['mime'] ?? 'application/octet-stream'],
+            ];
+        }
 
-		try {
-			$response = $client->request($method, $requestUri, $requestOptions);
+        return ['', ['headers' => $headers, 'multipart' => $multipart, 'timeout' => self::MULTIPART_TIMEOUT_SECONDS]];
+    }
 
-			return $this->getResponseContent($response);
-		} catch (RequestException $exception) {
-			$decodedContent = $this->getRequestExceptionContent($exception);
-			$messageCode = strval(Arr::get($decodedContent, 'message_code'));
+    private function withToken(array $headers, ?string $token, bool $json = true): array
+    {
+        if ($json) {
+            $headers['Content-Type'] = 'application/json';
+            $headers['Accept'] = 'application/json';
+        }
 
-			$customException = match ($messageCode) {
-				MessageCodesEnum::NOT_LOGGED_IN->value => MadelineNotLoggedInException::class,
-				MessageCodesEnum::NO_AUTH_SESSION->value => MadelineNoAuthSessionException::class,
-				default => null,
-			};
+        if ($token) {
+            $headers['Authorization'] = sprintf('Bearer %s', $token);
+        }
 
-			if (is_null($customException)) {
-				throw new MadelineRequestException(
-					strval(Arr::get($decodedContent, 'message')),
-					$exception->getCode(),
-					$exception,
-					$messageCode
-				);
-			}
+        return $headers;
+    }
 
-			throw new $customException;
-		}
-	}
+    private function mapException(RequestException $exception): MadelineRequestException|MadelineNotLoggedInException|MadelineNoAuthSessionException
+    {
+        $decodedContent = $this->getRequestExceptionContent($exception);
+        $messageCode = (string) Arr::get($decodedContent, 'message_code');
 
-	/**
-	 * @throws MadelineRequestException
-	 * @throws GuzzleException
-	 */
-	public function performRequestMultipleAccounts(string $method, string $uri, array $params = [], array $headers = []): array
-	{
-		$users = MpiAccountUser::query()
-			->orderBy('is_banned')
-			->get();
+        return match ($messageCode) {
+            MessageCodesEnum::NOT_LOGGED_IN->value => new MadelineNotLoggedInException(),
+            MessageCodesEnum::NO_AUTH_SESSION->value => new MadelineNoAuthSessionException(),
+            default => new MadelineRequestException(
+                (string) Arr::get($decodedContent, 'message', $exception->getMessage()),
+                (int) $exception->getCode(),
+                $exception,
+                $messageCode,
+            ),
+        };
+    }
 
-		$baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
+    private function isBanned(MadelineRequestException $exception): bool
+    {
+        return $exception->getCode() === Response::HTTP_SERVICE_UNAVAILABLE
+            || $exception->getErrorCode() === MessageCodesEnum::ACCOUNT_BANNED->value;
+    }
 
-		$client = new Client(['base_uri' => $baseUri . '\\']);
+    protected function client(): Client
+    {
+        return new Client(['base_uri' => rtrim(trim((string) config('madeline-proto-integration.url')), '/\\') . '/']);
+    }
 
-		$this->applyDefaultHeadersWithoutToken($headers);
-
-		$errors = [];
-
-		foreach ($users as $user) {
-			$requestUri = trim($uri, ' \\');
-			$headers['Authorization'] = sprintf('Bearer %s', $user->token);
-
-			$requestOptions = [
-				'headers' => $headers,
-			];
-
-			$this->prepareParams($method, $params, $requestUri, $requestOptions);
-
-			try {
-				$response = $client->request($method, $requestUri, $requestOptions);
-
-				return $this->getResponseContent($response);
-			} catch (RequestException $exception) {
-				$decodedContent = $this->getRequestExceptionContent($exception);
-				$messageCode = strval(Arr::get($decodedContent, 'message_code'));
-
-				if ($exception->getCode() === 503) {
-					$user->markAsBanned();
-				}
-
-				$errors[] = [
-					'user_id' => $user->id,
-					'message_code' => $messageCode,
-					'error' => $exception->getMessage(),
-				];
-			}
-		}
-
-		throw new MadelineRequestException(
-			'All accounts failed',
-			0,
-			null,
-			json_encode($errors, JSON_UNESCAPED_UNICODE)
-		);
-	}
-
-	/**
-	 * @throws MadelineRequestException
-	 * @throws GuzzleException
-	 */
-	public function performMultipartRequestMultipleAccounts(
-		string $method,
-		string $uri,
-		array  $data = [],
-		array  $files = [],
-		array  $headers = []
-	): array
-	{
-		$users = MpiAccountUser::query()
-			->orderBy('is_banned')
-			->get();
-
-		$baseUri = trim(strval(config('madeline-proto-integration.url')), ' \\');
-		$client = new Client(['base_uri' => $baseUri . '\\']);
-
-		$this->applyDefaultHeadersWithoutToken($headers, false);
-
-		$errors = [];
-
-		foreach ($users as $user) {
-			$requestUri = trim($uri, ' \\');
-			$headers['Authorization'] = sprintf('Bearer %s', $user->token);
-
-			$multipart = [];
-
-			foreach ($data as $name => $value) {
-				$multipart[] = [
-					'name' => $name,
-					'contents' => (string)$value,
-				];
-			}
-
-			foreach ($files as $name => $file) {
-				$multipart[] = [
-					'name' => $name,
-					'contents' => fopen($file['path'], 'r'),
-					'filename' => $file['name'] ?? basename($file['path']),
-					'headers' => [
-						'Content-Type' => $file['mime'] ?? 'application/octet-stream',
-					],
-				];
-			}
-
-			$requestOptions = [
-				'headers' => $headers,
-				'multipart' => $multipart,
-				'timeout' => 180,
-			];
-
-			try {
-				$response = $client->request($method, $requestUri, $requestOptions);
-
-				return $this->getResponseContent($response);
-			} catch (RequestException $exception) {
-				$decodedContent = $this->getRequestExceptionContent($exception);
-				$messageCode = strval(Arr::get($decodedContent, 'message_code'));
-
-				if ($exception->getCode() === 503) {
-					$user->markAsBanned();
-				}
-
-				$errors[] = [
-					'user_id' => $user->id,
-					'message_code' => $messageCode,
-					'error' => $exception->getMessage(),
-				];
-			}
-		}
-
-		throw new MadelineRequestException(
-			'All accounts failed',
-			0,
-			null,
-			json_encode($errors, JSON_UNESCAPED_UNICODE)
-		);
-	}
-
-
-	protected function getResponseContent(ResponseInterface $response): array
-	{
-		$content = $response->getBody()->getContents();
-		$decodedContent = json_decode($content, true);
-
-		return ($decodedContent) ?: [];
-	}
-
-	protected function prepareParams(
-		string $method,
-		array  $params,
-		string &$requestUri,
-		array  &$requestOptions,
-	): void
-	{
-		if (in_array($method, [HttpRequestMethodsEnum::METHOD_POST, HttpRequestMethodsEnum::METHOD_PUT])) {
-			$requestOptions['body'] = json_encode($params);
-
-			return;
-		}
-
-		$queryParams = http_build_query($params);
-		$requestUri .= '?' . $queryParams;
-	}
-
-	protected function applyDefaultHeaders(array &$headers, bool $forceJson = true): void
-	{
-		if ($forceJson) {
-			$headers['Content-Type'] = 'application/json';
-			$headers['Accept'] = 'application/json';
-		}
-
-		$authToken = $this->authTokenService->getAuthToken();
-
-		if ($authToken) {
-			$headers['Authorization'] = sprintf('Bearer %s', $authToken);
-		}
-	}
-
-	protected function applyDefaultHeadersWithoutToken(array &$headers, bool $forceJson = true): void
-	{
-		if ($forceJson) {
-			$headers['Content-Type'] = 'application/json';
-			$headers['Accept'] = 'application/json';
-		}
-	}
+    private function getResponseContent(ResponseInterface $response): array
+    {
+        return json_decode($response->getBody()->getContents(), true) ?: [];
+    }
 }

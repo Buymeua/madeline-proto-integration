@@ -17,4 +17,3 @@ class MPIUser extends Facade
         return 'mpi-user';
     }
 }
-

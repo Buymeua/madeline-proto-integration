@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Buyme\MadelineProtoIntegration\Exceptions\Auth;
 
-use Symfony\Component\HttpFoundation\Response;
 use Exception;
+use Symfony\Component\HttpFoundation\Response;
 
 class MadelineNotLoggedInException extends Exception
 {

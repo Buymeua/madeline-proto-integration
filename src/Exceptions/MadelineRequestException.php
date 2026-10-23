@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Buyme\MadelineProtoIntegration\Exceptions;
 
 use Exception;
-use Throwable;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Arr;
+use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class MadelineRequestException extends Exception
 {
@@ -46,6 +46,8 @@ class MadelineRequestException extends Exception
             })->all();
         }
 
-        return response()->json($data, $this->getCode());
+        $status = $this->getCode() >= 400 && $this->getCode() < 600 ? $this->getCode() : Response::HTTP_BAD_GATEWAY;
+
+        return response()->json($data, $status);
     }
 }

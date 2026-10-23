@@ -1,0 +1,22 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php: ${{ matrix.php }}
+          coverage: none
+      - run: composer update --no-interaction --no-progress --prefer-dist
+      - run: vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.dist.php --dry-run --diff
+      - run: vendor/bin/phpunit
